@@ -5,7 +5,6 @@ import os
 
 app = Flask(__name__)
 
-
 # Database initialization
 def init_db():
     db_path = 'university.db'
@@ -30,16 +29,16 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Form Routes (INSERT)
-
 print("Initializing database...")
 init_db()
 print("Starting Flask app...")
+
 
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
 
+# API Routes (INSERT)
 @app.route('/api/enroll_student', methods=['POST'])
 def enroll_student():
     try:
@@ -134,8 +133,7 @@ def add_professor():
     finally:
         conn.close()
 
-# Report Routes (SELECT)
-
+# API Routes (SELECT)
 @app.route('/api/department_enrollment_report', methods=['GET'])
 def department_enrollment_report():
     try:
@@ -196,17 +194,52 @@ def student_performance_report():
     finally:
         conn.close()
 
+# Form and Report Pages with Dropdown Data
 @app.route('/form/enroll_student', methods=['GET'])
 def form_enroll_student():
-    return render_template('enroll_student.html')
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Fetch all Programs
+    cur.execute("SELECT ProgramID, ProgramName FROM Programs ORDER BY ProgramName")
+    programs = cur.fetchall()
+    
+    # Fetch all CourseOfferings
+    cur.execute('''
+        SELECT co.CourseOfferingID, c.CourseName, t.TermName
+        FROM CourseOfferings co
+        JOIN Courses c ON co.CourseID = c.CourseID
+        JOIN Terms t ON co.TermID = t.TermID
+        ORDER BY c.CourseName, t.TermName
+    ''')
+    offerings = cur.fetchall()
+    
+    conn.close()
+    return render_template('enroll_student.html', programs=programs, offerings=offerings)
 
 @app.route('/form/add_course', methods=['GET'])
 def form_add_course():
-    return render_template('add_course.html')
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Fetch all Departments
+    cur.execute("SELECT DepartmentID, DepartmentName FROM Departments ORDER BY DepartmentName")
+    departments = cur.fetchall()
+    
+    conn.close()
+    return render_template('add_course.html', departments=departments)
 
 @app.route('/form/add_professor', methods=['GET'])
 def form_add_professor():
-    return render_template('add_professor.html')
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Fetch all Departments
+    cur.execute("SELECT DepartmentID, DepartmentName FROM Departments ORDER BY DepartmentName")
+    departments = cur.fetchall()
+    
+    conn.close()
+    return render_template('add_professor.html', departments=departments)
 
 @app.route('/report/department_enrollment', methods=['GET'])
 def report_department_enrollment():
@@ -219,7 +252,6 @@ def report_student_performance():
 @app.route('/navigation', methods=['GET'])
 def navigation():
     return render_template('navigation.html')
-
 
 if __name__ == '__main__':
     app.run(debug=True)

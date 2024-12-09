@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Enroll Student</title>
-<!-- Optional: Include Bootstrap CSS for styling -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"/>
 </head>
 <body class="p-4">
@@ -40,12 +39,21 @@
     <input type="email" id="email" class="form-control" required />
   </div>
   <div class="col-md-6">
-    <label for="programId" class="form-label">Program ID</label>
-    <input type="number" id="programId" class="form-control" />
+    <label for="programId" class="form-label">Program</label>
+    <select id="programId" class="form-select" required>
+      <option value="">-- Select a Program --</option>
+      {% for p in programs %}
+      <option value="{{ p.ProgramID }}">{{ p.ProgramName }}</option>
+      {% endfor %}
+    </select>
   </div>
   <div class="col-md-6">
-    <label for="courses" class="form-label">Course Offering IDs (comma separated)</label>
-    <input type="text" id="courses" class="form-control" placeholder="e.g. 101,102" />
+    <label for="courses" class="form-label">Course Offerings (hold CTRL or CMD to select multiple)</label>
+    <select id="courses" class="form-select" multiple size="5">
+      {% for o in offerings %}
+      <option value="{{ o.CourseOfferingID }}">{{ o.CourseName }} ({{ o.TermName }})</option>
+      {% endfor %}
+    </select>
   </div>
   <div class="col-12">
     <button type="submit" class="btn btn-primary">Enroll Student</button>
@@ -65,14 +73,13 @@ document.getElementById('enrollForm').addEventListener('submit', async (event) =
   const address = document.getElementById('address').value;
   const phone = document.getElementById('phone').value;
   const email = document.getElementById('email').value;
-  const program_id = parseInt(document.getElementById('programId').value) || null;
-  
-  // Parse course_offerings from comma-separated input
-  const coursesInput = document.getElementById('courses').value;
-  const courses = coursesInput ? coursesInput.split(',').map(c => parseInt(c.trim())).filter(Boolean) : [];
+  const program_id = parseInt(document.getElementById('programId').value);
+
+  const coursesSelect = document.getElementById('courses');
+  const selectedCourses = Array.from(coursesSelect.selectedOptions).map(opt => parseInt(opt.value));
 
   const data = {
-    first_name, last_name, dob, gender, address, phone, email, program_id, courses
+    first_name, last_name, dob, gender, address, phone, email, program_id, courses: selectedCourses
   };
 
   const res = await fetch('/api/enroll_student', {

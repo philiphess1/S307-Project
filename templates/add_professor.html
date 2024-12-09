@@ -10,35 +10,40 @@
 
 <h1>Add a New Professor</h1>
 <form id="professorForm" class="row g-3">
-  <div class="col-md-4">
+  <div class="col-md-3">
     <label for="firstName" class="form-label">First Name</label>
     <input type="text" id="firstName" class="form-control" required />
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <label for="lastName" class="form-label">Last Name</label>
     <input type="text" id="lastName" class="form-control" required />
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <label for="title" class="form-label">Title</label>
-    <input type="text" id="title" class="form-control" />
+    <input type="text" id="title" class="form-control" placeholder="e.g. Dr., Prof." />
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <label for="email" class="form-label">Email</label>
     <input type="email" id="email" class="form-control" />
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <label for="phone" class="form-label">Phone Number</label>
     <input type="text" id="phone" class="form-control" />
   </div>
-  <div class="col-md-4">
-    <label for="departmentId" class="form-label">Department ID</label>
-    <input type="number" id="departmentId" class="form-control" required />
+  <div class="col-md-3">
+    <label for="departmentId" class="form-label">Department</label>
+    <select id="departmentId" class="form-select" required>
+      <option value="">-- Select Department --</option>
+      {% for d in departments %}
+      <option value="{{ d.DepartmentID }}">{{ d.DepartmentName }}</option>
+      {% endfor %}
+    </select>
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <label for="rank" class="form-label">Rank</label>
-    <input type="text" id="rank" class="form-control" required />
+    <input type="text" id="rank" class="form-control" placeholder="e.g. Assistant Professor" required />
   </div>
-  <div class="col-md-4">
+  <div class="col-md-3">
     <label for="officeLocation" class="form-label">Office Location</label>
     <input type="text" id="officeLocation" class="form-control" />
   </div>
