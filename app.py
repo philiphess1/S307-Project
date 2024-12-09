@@ -1,9 +1,12 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from datetime import datetime
 import sqlite3
 import os
 
 app = Flask(__name__)
+
+
+# Database initialization
 def init_db():
     db_path = 'university.db'
     schema_path = 'schema.sql'
@@ -35,7 +38,7 @@ print("Starting Flask app...")
 
 @app.route('/', methods=['GET'])
 def index():
-    return 'Welcome to the University API'
+    return render_template('index.html')
 
 @app.route('/api/enroll_student', methods=['POST'])
 def enroll_student():
@@ -192,6 +195,31 @@ def student_performance_report():
         return jsonify(results)
     finally:
         conn.close()
+
+@app.route('/form/enroll_student', methods=['GET'])
+def form_enroll_student():
+    return render_template('enroll_student.html')
+
+@app.route('/form/add_course', methods=['GET'])
+def form_add_course():
+    return render_template('add_course.html')
+
+@app.route('/form/add_professor', methods=['GET'])
+def form_add_professor():
+    return render_template('add_professor.html')
+
+@app.route('/report/department_enrollment', methods=['GET'])
+def report_department_enrollment():
+    return render_template('department_enrollment_report.html')
+
+@app.route('/report/student_performance', methods=['GET'])
+def report_student_performance():
+    return render_template('student_performance_report.html')
+
+@app.route('/navigation', methods=['GET'])
+def navigation():
+    return render_template('navigation.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
