@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Enroll Student</title>
+<!-- Optional: Include Bootstrap CSS for styling -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"/>
+</head>
+<body class="p-4">
+
+<h1>Enroll a New Student</h1>
+<form id="enrollForm" class="row g-3">
+  <div class="col-md-6">
+    <label for="firstName" class="form-label">First Name</label>
+    <input type="text" id="firstName" class="form-control" required />
+  </div>
+  <div class="col-md-6">
+    <label for="lastName" class="form-label">Last Name</label>
+    <input type="text" id="lastName" class="form-control" required />
+  </div>
+  <div class="col-md-6">
+    <label for="dob" class="form-label">Date of Birth (YYYY-MM-DD)</label>
+    <input type="date" id="dob" class="form-control" required />
+  </div>
+  <div class="col-md-6">
+    <label for="gender" class="form-label">Gender (M/F/O)</label>
+    <input type="text" id="gender" class="form-control" />
+  </div>
+  <div class="col-12">
+    <label for="address" class="form-label">Address</label>
+    <input type="text" id="address" class="form-control" />
+  </div>
+  <div class="col-md-6">
+    <label for="phone" class="form-label">Phone Number</label>
+    <input type="text" id="phone" class="form-control" />
+  </div>
+  <div class="col-md-6">
+    <label for="email" class="form-label">Email</label>
+    <input type="email" id="email" class="form-control" required />
+  </div>
+  <div class="col-md-6">
+    <label for="programId" class="form-label">Program ID</label>
+    <input type="number" id="programId" class="form-control" />
+  </div>
+  <div class="col-md-6">
+    <label for="courses" class="form-label">Course Offering IDs (comma separated)</label>
+    <input type="text" id="courses" class="form-control" placeholder="e.g. 101,102" />
+  </div>
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary">Enroll Student</button>
+  </div>
+</form>
+
+<div id="response" class="mt-3"></div>
+
+<script>
+document.getElementById('enrollForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const first_name = document.getElementById('firstName').value;
+  const last_name = document.getElementById('lastName').value;
+  const dob = document.getElementById('dob').value;
+  const gender = document.getElementById('gender').value;
+  const address = document.getElementById('address').value;
+  const phone = document.getElementById('phone').value;
+  const email = document.getElementById('email').value;
+  const program_id = parseInt(document.getElementById('programId').value) || null;
+  
+  // Parse course_offerings from comma-separated input
+  const coursesInput = document.getElementById('courses').value;
+  const courses = coursesInput ? coursesInput.split(',').map(c => parseInt(c.trim())).filter(Boolean) : [];
+
+  const data = {
+    first_name, last_name, dob, gender, address, phone, email, program_id, courses
+  };
+
+  const res = await fetch('/api/enroll_student', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+
+  const json = await res.json();
+  const responseDiv = document.getElementById('response');
+  if (res.ok) {
+    responseDiv.innerHTML = `<div class="alert alert-success">Student enrolled with ID: ${json.student_id}</div>`;
+  } else {
+    responseDiv.innerHTML = `<div class="alert alert-danger">Error: ${json.message}</div>`;
+  }
+});
+</script>
+</body>
+</html>
