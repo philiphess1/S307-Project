@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Manage Students</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"/>
+</head>
+<body class="p-4">
+
+<h1>Manage Students</h1>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <label for="studentSelect" class="form-label">Select Student</label>
+    <select id="studentSelect" class="form-select">
+      <option value="">-- Select a Student --</option>
+    </select>
+  </div>
+  <div class="col-md-6 d-flex align-items-end">
+    <button id="loadStudent" class="btn btn-primary">Load Student</button>
+  </div>
+</div>
+
+<form id="studentForm" class="row g-3" style="display:none;">
+  <input type="hidden" id="currentStudentId" />
+  <div class="col-md-4">
+    <label for="firstName" class="form-label">First Name</label>
+    <input type="text" id="firstName" class="form-control"/>
+  </div>
+  <div class="col-md-4">
+    <label for="lastName" class="form-label">Last Name</label>
+    <input type="text" id="lastName" class="form-control"/>
+  </div>
+  <div class="col-md-4">
+    <label for="dob" class="form-label">Date of Birth (YYYY-MM-DD)</label>
+    <input type="date" id="dob" class="form-control"/>
+  </div>
+  <div class="col-md-3">
+    <label for="gender" class="form-label">Gender</label>
+    <input type="text" id="gender" class="form-control"/>
+  </div>
+  <div class="col-md-3">
+    <label for="phone" class="form-label">Phone</label>
+    <input type="text" id="phone" class="form-control"/>
+  </div>
+  <div class="col-md-6">
+    <label for="email" class="form-label">Email</label>
+    <input type="email" id="email" class="form-control"/>
+  </div>
+  <div class="col-12">
+    <label for="address" class="form-label">Address</label>
+    <input type="text" id="address" class="form-control"/>
+  </div>
+  <div class="col-md-6">
+    <label for="programId" class="form-label">Program ID</label>
+    <input type="number" id="programId" class="form-control"/>
+  </div>
+  <div class="col-12 mt-3">
+    <button id="updateBtn" type="button" class="btn btn-success me-2">Update Student</button>
+    <button id="deleteBtn" type="button" class="btn btn-danger">Delete Student</button>
+  </div>
+</form>
+
+<div id="response" class="mt-3"></div>
+
+<script>
+async function loadStudents() {
+  const res = await fetch('/api/students');
+  const data = await res.json();
+  const select = document.getElementById('studentSelect');
+  select.innerHTML = '<option value="">-- Select a Student --</option>';
+  data.forEach(s => {
+    const option = document.createElement('option');
+    option.value = s.StudentID;
+    option.textContent = `${s.LastName}, ${s.FirstName}`;
+    select.appendChild(option);
+  });
+}
+
+document.getElementById('loadStudent').addEventListener('click', async () => {
+  const studentId = parseInt(document.getElementById('studentSelect').value);
+  if(!studentId) {
+    alert("Please select a student first.");
+    return;
+  }
+  const res = await fetch(`/api/students/${studentId}`);
+  const json = await res.json();
+  if(res.ok) {
+    document.getElementById('studentForm').style.display = 'block';
+    document.getElementById('currentStudentId').value = json.StudentID;
+    document.getElementById('firstName').value = json.FirstName;
+    document.getElementById('lastName').value = json.LastName;
+    document.getElementById('dob').value = json.DateOfBirth;
+    document.getElementById('gender').value = json.Gender || '';
+    document.getElementById('phone').value = json.PhoneNumber || '';
+    document.getElementById('email').value = json.Email || '';
+    document.getElementById('address').value = json.Address || '';
+    document.getElementById('programId').value = json.ProgramID || '';
+  } else {
+    document.getElementById('response').innerHTML = `<div class="alert alert-danger">${json.message}</div>`;
+  }
+});
+
+document.getElementById('updateBtn').addEventListener('click', async () => {
+  const student_id = parseInt(document.getElementById('currentStudentId').value);
+  if(!student_id) return;
+  
+  const data = {
+    first_name: document.getElementById('firstName').value,
+    last_name: document.getElementById('lastName').value,
+    dob: document.getElementById('dob').value,
+    gender: document.getElementById('gender').value,
+    phone: document.getElementById('phone').value,
+    email: document.getElementById('email').value,
+    address: document.getElementById('address').value,
+    program_id: parseInt(document.getElementById('programId').value) || null
+  };
+
+  const res = await fetch(`/api/update_student/${student_id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+
+  const json = await res.json();
+  if(res.ok) {
+    document.getElementById('response').innerHTML = `<div class="alert alert-success">Student updated successfully</div>`;
+    await loadStudents(); // Refresh the dropdown in case name changed
+  } else {
+    document.getElementById('response').innerHTML = `<div class="alert alert-danger">Error: ${json.message}</div>`;
+  }
+});
+
+document.getElementById('deleteBtn').addEventListener('click', async () => {
+  const student_id = parseInt(document.getElementById('currentStudentId').value);
+  if(!student_id) return;
+  
+  if(!confirm("Are you sure you want to delete this student?")) return;
+
+  const res = await fetch(`/api/delete_student/${student_id}`, {
+    method: 'DELETE'
+  });
+
+  const json = await res.json();
+  if(res.ok) {
+    document.getElementById('response').innerHTML = `<div class="alert alert-success">${json.message}</div>`;
+    document.getElementById('studentForm').style.display = 'none';
+    await loadStudents(); // Refresh dropdown after deletion
+  } else {
+    document.getElementById('response').innerHTML = `<div class="alert alert-danger">Error: ${json.message}</div>`;
+  }
+});
+
+// Load the students as soon as the page loads
+loadStudents();
+</script>
+
+</body>
+</html>

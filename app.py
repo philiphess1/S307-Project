@@ -18,6 +18,7 @@ def init_db():
             with open(schema_path, 'r') as f:
                 conn.executescript(f.read())
             print("Database initialized successfully")
+            conn.close()
         else:
             print("Database already exists")
     except Exception as e:
@@ -33,12 +34,13 @@ print("Initializing database...")
 init_db()
 print("Starting Flask app...")
 
-
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
 
-# API Routes (INSERT)
+# ----------------------------
+# API ROUTES - CREATE
+# ----------------------------
 @app.route('/api/enroll_student', methods=['POST'])
 def enroll_student():
     try:
@@ -46,7 +48,6 @@ def enroll_student():
         conn = get_db()
         cur = conn.cursor()
         
-        # Insert into Students table
         cur.execute('''
             INSERT INTO Students (
                 FirstName, LastName, DateOfBirth, Gender, 
@@ -61,13 +62,12 @@ def enroll_student():
         
         student_id = cur.lastrowid
         
-        # Insert course enrollments
-        for course_id in data['courses']:
+        for course_id in data.get('courses', []):
             cur.execute('''
                 INSERT INTO Enrollments (StudentID, CourseOfferingID, EnrollmentDate)
                 VALUES (?, ?, ?)
             ''', (student_id, course_id, datetime.now().strftime('%Y-%m-%d')))
-        
+
         conn.commit()
         return jsonify({'status': 'success', 'student_id': student_id})
     except Exception as e:
@@ -107,7 +107,7 @@ def add_professor():
         conn = get_db()
         cur = conn.cursor()
         
-        # First insert into Staff table
+        # Insert into Staff
         cur.execute('''
             INSERT INTO Staff (FirstName, LastName, Title, Email, PhoneNumber, DepartmentID)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -118,7 +118,7 @@ def add_professor():
         
         staff_id = cur.lastrowid
         
-        # Then insert into Professors table
+        # Insert into Professors
         cur.execute('''
             INSERT INTO Professors (StaffID, Rank, OfficeLocation)
             VALUES (?, ?, ?)
@@ -174,48 +174,129 @@ def department_enrollment_report():
 
 @app.route('/api/student_performance_report', methods=['GET'])
 def student_performance_report():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT 
+            s.StudentID,
+            s.FirstName || ' ' || s.LastName as student_name,
+            p.ProgramName,
+            COUNT(e.EnrollmentID) as courses_enrolled,
+            AVG(CASE 
+                WHEN g.GradeValue = 'A' THEN 4.0
+                WHEN g.GradeValue = 'B' THEN 3.0
+                WHEN g.GradeValue = 'C' THEN 2.0
+                WHEN g.GradeValue = 'D' THEN 1.0
+                WHEN g.GradeValue = 'F' THEN 0.0
+                ELSE NULL
+            END) as gpa
+        FROM Students s
+        JOIN Programs p ON p.ProgramID = s.ProgramID
+        LEFT JOIN Enrollments e ON e.StudentID = s.StudentID
+        LEFT JOIN Grades g ON g.GradeID = e.GradeID
+        GROUP BY s.StudentID, s.FirstName, s.LastName, p.ProgramName
+        ORDER BY gpa DESC NULLS LAST
+    ''')
+    results = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return jsonify(results)
+
+# ----------------------------
+# API ROUTES - READ/UPDATE/DELETE STUDENTS
+# ----------------------------
+@app.route('/api/students', methods=['GET'])
+def get_students():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT StudentID, FirstName, LastName
+        FROM Students
+        ORDER BY LastName, FirstName
+    ''')
+    students = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return jsonify(students)
+
+@app.route('/api/students/<int:student_id>', methods=['GET'])
+def get_student(student_id):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT StudentID, FirstName, LastName, DateOfBirth, Gender, Address, PhoneNumber, Email, ProgramID
+        FROM Students
+        WHERE StudentID = ?
+    ''', (student_id,))
+    row = cur.fetchone()
+    conn.close()
+    if row:
+        return jsonify(dict(row))
+    else:
+        return jsonify({'status': 'error', 'message': 'Student not found'}), 404
+
+@app.route('/api/update_student/<int:student_id>', methods=['PUT'])
+def update_student(student_id):
+    try:
+        data = request.get_json()
+        conn = get_db()
+        cur = conn.cursor()
+
+        # Check if student exists
+        cur.execute('SELECT StudentID FROM Students WHERE StudentID = ?', (student_id,))
+        existing = cur.fetchone()
+        if not existing:
+            conn.close()
+            return jsonify({'status': 'error', 'message': 'Student not found'}), 404
+
+        cur.execute('''
+            UPDATE Students
+            SET FirstName = ?, LastName = ?, DateOfBirth = ?, Gender = ?, Address = ?, PhoneNumber = ?, Email = ?, ProgramID = ?
+            WHERE StudentID = ?
+        ''', (
+            data['first_name'], data['last_name'], data['dob'], 
+            data['gender'], data['address'], data['phone'], 
+            data['email'], data['program_id'], student_id
+        ))
+
+        conn.commit()
+        conn.close()
+        return jsonify({'status': 'success', 'student_id': student_id})
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/delete_student/<int:student_id>', methods=['DELETE'])
+def delete_student(student_id):
     try:
         conn = get_db()
         cur = conn.cursor()
-        
-        cur.execute('''
-            SELECT 
-                s.StudentID,
-                s.FirstName || ' ' || s.LastName as student_name,
-                p.ProgramName,
-                COUNT(e.EnrollmentID) as courses_enrolled,
-                AVG(CASE 
-                    WHEN g.GradeValue = 'A' THEN 4.0
-                    WHEN g.GradeValue = 'B' THEN 3.0
-                    WHEN g.GradeValue = 'C' THEN 2.0
-                    WHEN g.GradeValue = 'D' THEN 1.0
-                    WHEN g.GradeValue = 'F' THEN 0.0
-                    ELSE NULL
-                END) as gpa
-            FROM Students s
-            JOIN Programs p ON p.ProgramID = s.ProgramID
-            LEFT JOIN Enrollments e ON e.StudentID = s.StudentID
-            LEFT JOIN Grades g ON g.GradeID = e.GradeID
-            GROUP BY s.StudentID, s.FirstName, s.LastName, p.ProgramName
-            ORDER BY gpa DESC NULLS LAST
-        ''')
-        
-        results = [dict(row) for row in cur.fetchall()]
-        return jsonify(results)
-    finally:
-        conn.close()
 
-# Form and Report Pages with Dropdown Data
+        cur.execute('SELECT StudentID FROM Students WHERE StudentID = ?', (student_id,))
+        existing = cur.fetchone()
+        if not existing:
+            conn.close()
+            return jsonify({'status': 'error', 'message': 'Student not found'}), 404
+
+        cur.execute('DELETE FROM Students WHERE StudentID = ?', (student_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'status': 'success', 'message': f'Student {student_id} deleted'})
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+# ----------------------------
+# FORM ROUTES (Pages)
+# ----------------------------
 @app.route('/form/enroll_student', methods=['GET'])
 def form_enroll_student():
     conn = get_db()
     cur = conn.cursor()
     
-    # Fetch all Programs
     cur.execute("SELECT ProgramID, ProgramName FROM Programs ORDER BY ProgramName")
     programs = cur.fetchall()
     
-    # Fetch all CourseOfferings
     cur.execute('''
         SELECT co.CourseOfferingID, c.CourseName, t.TermName
         FROM CourseOfferings co
@@ -233,7 +314,6 @@ def form_add_course():
     conn = get_db()
     cur = conn.cursor()
     
-    # Fetch all Departments
     cur.execute("SELECT DepartmentID, DepartmentName FROM Departments ORDER BY DepartmentName")
     departments = cur.fetchall()
     
@@ -245,13 +325,19 @@ def form_add_professor():
     conn = get_db()
     cur = conn.cursor()
     
-    # Fetch all Departments
     cur.execute("SELECT DepartmentID, DepartmentName FROM Departments ORDER BY DepartmentName")
     departments = cur.fetchall()
     
     conn.close()
     return render_template('add_professor.html', departments=departments)
 
+@app.route('/form/manage_students', methods=['GET'])
+def manage_students():
+    return render_template('manage_students.html')
+
+# ----------------------------
+# REPORT ROUTES (Pages)
+# ----------------------------
 @app.route('/report/department_enrollment', methods=['GET'])
 def report_department_enrollment():
     return render_template('department_enrollment_report.html')
@@ -260,6 +346,9 @@ def report_department_enrollment():
 def report_student_performance():
     return render_template('student_performance_report.html')
 
+# ----------------------------
+# NAVIGATION
+# ----------------------------
 @app.route('/navigation', methods=['GET'])
 def navigation():
     return render_template('navigation.html')
