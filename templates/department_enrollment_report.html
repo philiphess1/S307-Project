@@ -11,33 +11,38 @@
 <button id="loadReport" class="btn btn-primary mb-3">Load Report</button>
 <table class="table table-bordered" id="reportTable">
   <thead>
-    <tr>
-      <th>Department Name</th>
-      <th>Student Count</th>
-      <th>Course Count</th>
-      <th>Professor Count</th>
-    </tr>
+      <tr>
+          <th>Course</th>
+          <th>Department</th>
+          <th>Professor</th>
+          <th>Students</th>
+      </tr>
   </thead>
   <tbody></tbody>
 </table>
 
+
 <script>
 document.getElementById('loadReport').addEventListener('click', async () => {
-  const res = await fetch('/api/department_enrollment_report');
-  const data = await res.json();
-  const tbody = document.querySelector('#reportTable tbody');
-  tbody.innerHTML = '';
-  data.forEach(row => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${row.DepartmentName}</td>
-      <td>${row.student_count}</td>
-      <td>${row.course_count}</td>
-      <td>${row.professor_count}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+    const res = await fetch('/api/department_enrollment_report');
+    const data = await res.json();
+    const tbody = document.querySelector('#reportTable tbody');
+    tbody.innerHTML = '';
+
+    Object.keys(data).forEach(course => {
+        const row = data[course];
+        const students = row.Students.join(', ');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${course}</td>
+            <td>${row.Department}</td>
+            <td>${row.Professor}</td>
+            <td>${students}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 });
+
 </script>
 
 </body>

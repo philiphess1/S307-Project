@@ -133,30 +133,41 @@ def add_professor():
     finally:
         conn.close()
 
-# API Routes (SELECT)
 @app.route('/api/department_enrollment_report', methods=['GET'])
 def department_enrollment_report():
     try:
         conn = get_db()
         cur = conn.cursor()
-        
+
         cur.execute('''
             SELECT 
+                c.CourseName,
+                c.CourseCode,
                 d.DepartmentName,
-                COUNT(DISTINCT s.StudentID) as student_count,
-                COUNT(DISTINCT c.CourseID) as course_count,
-                COUNT(DISTINCT p.ProfessorID) as professor_count
-            FROM Departments d
-            LEFT JOIN Programs pr ON pr.DepartmentID = d.DepartmentID
-            LEFT JOIN Students s ON s.ProgramID = pr.ProgramID
-            LEFT JOIN Courses c ON c.DepartmentID = d.DepartmentID
-            LEFT JOIN CourseOfferings co ON co.CourseID = c.CourseID
-            LEFT JOIN Professors p ON co.InstructorID = p.ProfessorID
-            GROUP BY d.DepartmentID, d.DepartmentName
-            ORDER BY student_count DESC
+                s_prof.FirstName || ' ' || s_prof.LastName as ProfessorName,
+                s.StudentID,
+                s.FirstName || ' ' || s.LastName as StudentName
+            FROM Courses c
+            JOIN Departments d ON c.DepartmentID = d.DepartmentID
+            JOIN CourseOfferings co ON co.CourseID = c.CourseID
+            JOIN Professors p ON co.InstructorID = p.ProfessorID
+            JOIN Staff s_prof ON p.StaffID = s_prof.StaffID
+            JOIN Enrollments e ON e.CourseOfferingID = co.CourseOfferingID
+            JOIN Students s ON e.StudentID = s.StudentID
+            ORDER BY c.CourseName, s.LastName;
         ''')
+
+        results = {}
+        for row in cur.fetchall():
+            course = f"{row['CourseCode']} - {row['CourseName']}"
+            if course not in results:
+                results[course] = {
+                    "Department": row["DepartmentName"],
+                    "Professor": row["ProfessorName"],
+                    "Students": []
+                }
+            results[course]["Students"].append(row["StudentName"])
         
-        results = [dict(row) for row in cur.fetchall()]
         return jsonify(results)
     finally:
         conn.close()
