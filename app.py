@@ -4,14 +4,22 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-
-# Database initialization
 def init_db():
-    if not os.path.exists('university.db'):
-        conn = sqlite3.connect('university.db')
-        with open('schema.sql', 'r') as f:
-            conn.executescript(f.read())
-        conn.close()
+    db_path = 'university.db'
+    schema_path = 'schema.sql'
+    
+    try:
+        if not os.path.exists(db_path):
+            print(f"Creating database at {db_path}")
+            conn = sqlite3.connect(db_path)
+            print(f"Reading schema from {schema_path}")
+            with open(schema_path, 'r') as f:
+                conn.executescript(f.read())
+            print("Database initialized successfully")
+        else:
+            print("Database already exists")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
 
 # Database connection helper
 def get_db():
@@ -20,6 +28,10 @@ def get_db():
     return conn
 
 # Form Routes (INSERT)
+
+print("Initializing database...")
+init_db()
+print("Starting Flask app...")
 
 @app.route('/', methods=['GET'])
 def index():
@@ -182,5 +194,4 @@ def student_performance_report():
         conn.close()
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)
